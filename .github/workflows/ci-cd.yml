@@ -9,38 +9,50 @@ on:
       - main
 
 jobs:
-  # Continuous Integration (CI) Job: Install dependencies and run tests
+  # Continuous Integration (CI) Job
   ci:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout the repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Set up Node.js (if needed, adjust to your setup)
-        uses: actions/setup-node@v3
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: '14'  # Change this to the version of Node.js you're using
+          node-version: '20'
 
-      - name: Install dependencies (if using npm/yarn)
-        run: npm install  # Adjust if you're using yarn or another package manager
+      - name: Install dependencies
+        run: npm install
 
-      - name: Run tests (if you have test scripts defined)
-        run: npm test  # Adjust to your test command
+      - name: Run tests
+        run: npm test --if-present  # won't fail if no tests defined
 
-  # Continuous Deployment (CD) Job: Deploy the app (example using SSH)
+  # Continuous Deployment (CD) Job: Deploy to GitHub Pages
   cd:
-    needs: ci  # This ensures the CD job only runs after CI is successful
+    needs: ci
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: write  # needed to push to gh-pages branch
 
     steps:
       - name: Checkout the repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Deploy to server (SSH example)
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}  # Store SSH key in GitHub secrets
-        run: |
-          echo "$SSH_PRIVATE_KEY" > private_key.pem
-          chmod 600 private_key.pem
-          ssh -i private_key.pem user@your-server.com "cd /path/to/your/app && git pull && npm install && pm2 restart app"  # Adjust as needed
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build the app
+        run: npm run build --if-present  # skips if no build script
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./build  # change to ./dist if using Vite
